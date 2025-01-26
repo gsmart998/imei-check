@@ -1,11 +1,13 @@
 import os
+from functools import wraps
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base, Users, VALID_ROLES, VALID_STATUSES
+from database.models import Base, Users, VALID_ROLES, VALID_STATUSES
 from logger_config import get_logger
+from bot import bot
 
 
 log = get_logger(__name__)  # get configured logger
@@ -24,6 +26,31 @@ def init_db():
 
 
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+
+def check_user_permissions(allowed_roles: list[str]):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(message, *args, **kwargs):
+            tg_id = message.chat.id
+
+            with Session() as session:
+                user = session.query(Users).filter(
+                    Users.tg_id == tg_id).one_or_none()
+
+                if user and \
+                        user.role in allowed_roles and \
+                        user.status == "active":
+                    return func(message, *args, **kwargs)
+
+                else:
+                    bot.send_message(
+                        chat_id=tg_id,
+                        text="You do not have permission for this command."
+                    )
+                    return
+        return wrapper
+    return decorator
 
 
 def create_user(tg_id: int, name: str) -> bool:
@@ -50,29 +77,6 @@ def create_user(tg_id: int, name: str) -> bool:
         else:
             log.warning(f"User with {tg_id=} already exist!")
             return True
-
-
-def is_user_admin(tg_id: int) -> bool:
-    """
-    Checks if user with the given Telegram ID has an admin role and an active
-    status.
-    """
-    with Session() as session:
-        user = session.query(Users).filter(Users.tg_id == tg_id).one_or_none()
-        if not user or user.role != "admin" or user.status != "active":
-            return False
-        return True
-
-
-def is_user_active(tg_id: int) -> bool:
-    """
-    Checks if user with the given Telegram ID has an active status.
-    """
-    with Session() as session:
-        user = session.query(Users).filter(Users.tg_id == tg_id).one_or_none()
-        if not user or user.status != "active":
-            return False
-        return True
 
 
 def update_user(

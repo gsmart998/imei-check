@@ -1,63 +1,65 @@
 import os
 
 from dotenv import load_dotenv
-import telebot
 from telebot.types import Message
 
+from imei_services.imeicheck_net import ImeiCheckClient
+from bot import bot, bot_commands
 from logger_config import get_logger
-from database import (
-    init_db,
+from database.database import (
     create_user,
-    is_user_admin,
     update_user,
+    check_user_permissions,
+    init_db,
 )
-from imei_services.imeicheck_net import ImeiChecker
 
 log = get_logger(__name__)  # get configured logger
 
 load_dotenv()
-bot = telebot.TeleBot(os.getenv("TG_TOKEN"), parse_mode="Markdown")
-imei_checker = ImeiChecker(os.getenv("IMEICHECK_NET_TOKEN"))
-print(f"Current token: {os.getenv("IMEICHECK_NET_TOKEN")}")
+imei_checker = ImeiCheckClient(os.getenv("IMEICHECK_NET_TOKEN"))
 
 
 @bot.message_handler(commands=["start"])
+@check_user_permissions(allowed_roles=["admin", "user"])
 def send_welcome(message):
     bot.send_message(
         chat_id=message.chat.id,
-        text="You started the bot!\n/help for available commands",
+        text="You started the bot!\n/help for available commands.",
     )
 
 
 @bot.message_handler(commands=["help"])
+@check_user_permissions(allowed_roles=["admin", "user"])
 def send_help(message):
-    help_text = "Вот список доступных комманд:\n"
+    help_header = "Here's the list of available commands:\n"
     commands = bot.get_my_commands()
-    for command in commands:
-        help_text += f"/{command.command} - {command.description}\n"
+    commands_text = "\n".join(
+        [f"/{c.command} - {c.description}" for c in commands]
+    )
+    text = help_header + commands_text.replace("_", "\\_")
     bot.send_message(
         chat_id=message.chat.id,
-        text=help_text,
+        text=text,
     )
 
 
 @bot.message_handler(commands=["add_user"])
+@check_user_permissions(allowed_roles=["admin"])
 def add_user(message: Message):
-    is_admin = is_user_admin(tg_id=message.chat.id)
-    if is_admin:
-        try:
-            _, tg_id, name = message.text.split()
-            tg_id = int(tg_id)
-            user_created = create_user(tg_id=tg_id, name=name)
-            if user_created:
-                text = f"User with id *{tg_id}* registered."
-            else:
-                text = "An error occurred during user registration."
+    try:
+        _, tg_id, name = message.text.split()
+        tg_id = int(tg_id)
+        user_created = create_user(tg_id=tg_id, name=name)
+        if user_created:
+            text = f"User with id *{tg_id}* registered."
+        else:
+            text = "An error occurred during user registration."
 
-        except ValueError:
-            text = "Invalid command format, correct example:\n/add 1234567890 John"
-    else:
-        text = "You do not have permission for this command. Admins only."
+    except ValueError:
+        text = (
+            "Incorrect command format. Use the following example:\n"
+            "/add\\_user \\[telegram id] \\[user name]"
+        )
 
     bot.send_message(
         chat_id=message.chat.id,
@@ -66,31 +68,29 @@ def add_user(message: Message):
 
 
 @bot.message_handler(commands=["change_role"])
+@check_user_permissions(allowed_roles=["admin"])
 def change_user_role(message: Message):
-    is_admin = is_user_admin(tg_id=message.chat.id)
-    if is_admin:
-        try:
-            _, tg_id, role = message.text.split()
-            tg_id = int(tg_id)
+    try:
+        _, tg_id, role = message.text.split()
+        tg_id = int(tg_id)
 
-            if tg_id == message.chat.id:
-                bot.send_message(
-                    chat_id=message.chat.id,
-                    text="You can't change your role.",
-                )
-                return
+        if tg_id == message.chat.id:
+            bot.send_message(
+                chat_id=message.chat.id,
+                text="You can't change your role.",
+            )
+            return
 
-            if update_user(tg_id=tg_id, new_role=role):
-                text = f"User *{tg_id}* has new role: *{role}*."
-            else:
-                text = "User was not found or role is invalid."
+        if update_user(tg_id=tg_id, new_role=role):
+            text = f"User *{tg_id}* has new role: *{role}*."
+        else:
+            text = "User was not found or role is invalid."
 
-        except ValueError:
-            text = "Invalid command format, correct example:\n/change\\_role 1234567890 admin"
-
-    else:
-        text = "You do not have permission for this command. Admins only."
-
+    except ValueError:
+        text = (
+            "Incorrect command format. Use the following example:\n"
+            "/change\\_role \\[telegram id] \\[new user role]"
+        )
     bot.send_message(
         chat_id=message.chat.id,
         text=text,
@@ -98,30 +98,28 @@ def change_user_role(message: Message):
 
 
 @bot.message_handler(commands=["change_status"])
+@check_user_permissions(allowed_roles=["admin"])
 def change_user_status(message: Message):
-    is_admin = is_user_admin(tg_id=message.chat.id)
-    if is_admin:
-        try:
-            _, tg_id, status = message.text.split()
-            tg_id = int(tg_id)
-            if tg_id == message.chat.id:
-                bot.send_message(
-                    chat_id=message.chat.id,
-                    text="You can't change your status.",
-                )
-                return
+    try:
+        _, tg_id, status = message.text.split()
+        tg_id = int(tg_id)
+        if tg_id == message.chat.id:
+            bot.send_message(
+                chat_id=message.chat.id,
+                text="You can't change your status.",
+            )
+            return
 
-            if update_user(tg_id=tg_id, new_status=status):
-                text = f"User *{tg_id}* is *{status}* now."
-            else:
-                text = "User was not found or status is invalid."
+        if update_user(tg_id=tg_id, new_status=status):
+            text = f"User *{tg_id}* is *{status}* now."
+        else:
+            text = "User was not found or status is invalid."
 
-        except ValueError:
-            text = "Invalid command format, correct example:\n/change\\_status 1234567890 disabled"
-
-    else:
-        text = "You do not have permission for this command. Admins only."
-
+    except ValueError:
+        text = (
+            "Incorrect command format. Use the following example:\n"
+            "/change\\_status \\[telegram id] \\[new user status]"
+        )
     bot.send_message(
         chat_id=message.chat.id,
         text=text,
@@ -129,6 +127,7 @@ def change_user_status(message: Message):
 
 
 @bot.message_handler(commands=["check_imei"])
+@check_user_permissions(allowed_roles=["admin", "user"])
 def check_imei(message: Message):
     if message.text == "/check_imei":
         services = imei_checker.get_services()
@@ -140,9 +139,12 @@ def check_imei(message: Message):
             ]
         )
 
-        text = "Send a command like:\n/check\\_imei 123456789012345 *id*\n"
-        text += "Where instead of id will be the id of the service you need from the table below:"
-        text += f"\n```id|price|title\n{text_rows}```"
+        text = (
+            "Use the following example:\n"
+            "/check\\_imei \\[IMEI] \\[service id]\n"
+            "Where instead of service id will be the id of the service you need from "
+            f"the table below:\n```id|price|title\n{text_rows}```"
+        )
         bot.send_message(
             chat_id=message.chat.id,
             text=text,
@@ -161,8 +163,10 @@ def check_imei(message: Message):
 
     except ValueError:
         log.error(f"Invalid command format, user: {message.chat.id}")
-        text = "Invalid command format, correct example:\n/check_imei 123456789012345 1"
-
+        text = (
+            "Invalid command format, correct example:\n"
+            "/check_imei [IMEI] [service id]"
+        )
     except Exception as e:
         log.error(f"Error while checking IMEI: {e}")
         text = f"An error occurred: {str(e)}"
@@ -175,12 +179,13 @@ def check_imei(message: Message):
 
 
 @bot.message_handler(commands=["balance"])
+@check_user_permissions(allowed_roles=["admin", "user"])
 def check_balance(message: Message):
     balance = imei_checker.get_balance()
     service_name = imei_checker.get_service_name()
     bot.send_message(
         chat_id=message.chat.id,
-        text=f"Service: *{service_name}*\nAccount balance: *{balance}*"
+        text=f"Service: *{service_name}*\nAccount balance: *{balance}*",
     )
 
 
@@ -190,6 +195,11 @@ def handle_all_messages(message: Message):
 
 
 if __name__ == "__main__":
-    init_db()
-    log.info("The bot is running...")
-    bot.polling(non_stop=True)
+    try:
+        init_db()
+        bot.set_my_commands(commands=bot_commands)
+        log.info("The bot is running...")
+        bot.polling(non_stop=True)
+        # bot.infinity_polling()
+    except Exception as e:
+        log.error(f"Bot polling failed: {e}")

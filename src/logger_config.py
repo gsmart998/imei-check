@@ -8,7 +8,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(),  # console output
-        logging.FileHandler("app.log"),  # file output
+        logging.FileHandler("../logs/app.log"),  # file output
     ],
 )
 

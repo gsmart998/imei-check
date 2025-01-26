@@ -1,6 +1,5 @@
-from sqlalchemy import Column, BigInteger, String, ForeignKey, TIMESTAMP
+from sqlalchemy import Column, BigInteger, String, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from logger_config import get_logger

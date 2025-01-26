@@ -14,7 +14,7 @@ class ImeiStatus(Enum):
     UNSUCCESSFUL = "unsuccessful"
 
 
-class ImeiChecker():
+class ImeiCheckClient():
     ERROR_STATUSES = {
         ImeiStatus.FAILED.value: "Internal error occurred during checking. Please, try again later.",
         ImeiStatus.UNSUCCESSFUL.value: "System did not find information for deviceId using the provided service.",
@@ -27,6 +27,25 @@ class ImeiChecker():
             'Authorization': 'Bearer ' + token,
             'Content-Type': 'application/json'
         }
+
+    def get_service_name(self) -> str:
+        """Get the current list of services from the API"""
+        return self._service_name
+
+    def get_balance(self) -> float:
+        data = self._make_request(method="GET", endpoint="account")
+        return float(data.get("balance", 0.0))
+
+    def get_services(self) -> list[dict]:
+        return self._make_request(method="GET", endpoint="services")
+
+    def get_imei_info(self, imei: str, service_id: int) -> dict:
+        body = json.dumps({
+            "deviceId": imei,
+            "serviceId": service_id
+        })
+        data = self._make_request(method="POST", endpoint="checks", data=body)
+        return self._process_imei_status(data=data)
 
     def _make_request(self, method: str, endpoint: str, data=None) -> dict:
         """Helper method for making HTTP requests."""
@@ -67,22 +86,3 @@ class ImeiChecker():
 
         log.error(f"Unknown status received from API: {status}")
         raise RuntimeError(f"Unknown status received from API.")
-
-    def get_service_name(self) -> str:
-        """Get the current list of services from the API"""
-        return self._service_name
-
-    def get_balance(self) -> float:
-        data = self._make_request(method="GET", endpoint="account")
-        return float(data.get("balance", 0.0))
-
-    def get_services(self) -> list[dict]:
-        return self._make_request(method="GET", endpoint="services")
-
-    def get_imei_info(self, imei: str, service_id: int) -> dict:
-        body = json.dumps({
-            "deviceId": imei,
-            "serviceId": service_id
-        })
-        data = self._make_request(method="POST", endpoint="checks", data=body)
-        return self._process_imei_status(data=data)
