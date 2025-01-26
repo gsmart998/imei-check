@@ -38,8 +38,6 @@ class Users(Base):
         onupdate=func.current_timestamp()
     )
 
-    # user_translations = relationship("UserTranslations", back_populates="user")
-
     def __init__(
         self,
         tg_id: int,
