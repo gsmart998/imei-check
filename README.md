@@ -39,19 +39,6 @@ This project is a backend system designed to validate and check IMEI devices usi
     - `/help`: Lists all available commands.
         
 
-### 3. API Endpoints
-
-- **POST **`**/api/check-imei**`
-    
-    - **Parameters**:
-        
-        - `imei` (string, required): The IMEI device identifier.
-            
-        - `token` (string, required): Authorization token.
-            
-    - **Response**: A JSON object containing IMEI information or an error message
-        
-
 
 ## Installation
 
