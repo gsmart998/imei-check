@@ -199,7 +199,6 @@ if __name__ == "__main__":
         init_db()
         bot.set_my_commands(commands=bot_commands)
         log.info("The bot is running...")
-        bot.polling(non_stop=True)
-        # bot.infinity_polling()
+        bot.infinity_polling()
     except Exception as e:
         log.error(f"Bot polling failed: {e}")
