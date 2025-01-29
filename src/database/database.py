@@ -16,8 +16,8 @@ try:
     load_dotenv()
     engine = create_engine(os.getenv("DATABASE_URL"))
     log.info("Engine created!")
-except Exception as ex:
-    log.error(f"Engine not created! {ex}")
+except Exception as e:
+    log.error(f"Engine not created! {e}")
 
 
 # create tables
@@ -53,7 +53,7 @@ def check_user_permissions(allowed_roles: list[str]):
     return decorator
 
 
-def create_user(tg_id: int, name: str) -> bool:
+def create_user(tg_id: int, name: str, role: str = "user") -> bool:
     """
     Creates new user in the database with the given Telegram ID.
     Return True if user was created, otherwise False
@@ -63,20 +63,42 @@ def create_user(tg_id: int, name: str) -> bool:
             session.query(Users).filter(Users.tg_id == tg_id).exists()
         ).scalar()
         if not user_exists:
-            new_user = Users(tg_id=tg_id, name=name)
+            new_user = Users(tg_id=tg_id, name=name, role=role)
             try:
                 session.add(new_user)
                 session.commit()
                 log.info(f"User created: {tg_id=}, {name=}")
                 return True
 
-            except Exception as ex:
-                log.error(f"An error occurred while creating user: {ex}")
+            except Exception as e:
+                log.error(f"An error occurred while creating user: {e}")
                 return False
 
         else:
             log.warning(f"User with {tg_id=} already exist!")
             return True
+
+
+def init_user():
+    """
+    Initializes the first administrator user in the database. The user data is
+    taken from the env 'INIT_ADMIN_USER'.
+    """
+    init_user = os.getenv("INIT_ADMIN_USER")
+    if init_user:
+        log.info(f"Init user found: {init_user=}.")
+        try:
+            tg_id, name = init_user.split(":")
+            tg_id = int(tg_id)
+            user_created = create_user(tg_id=tg_id, name=name, role="admin")
+            if user_created:
+                log.info("Init user created.")
+            else:
+                log.warning("Init user did not created.")
+        except ValueError as e:
+            log.error(f"Error during user {init_user} initialization: {e}.")
+    else:
+        log.info("Init user not found, skip this step.")
 
 
 def update_user(

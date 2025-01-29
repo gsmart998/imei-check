@@ -139,7 +139,15 @@ urllib3==2.3.0
 ### Telegram Bot
 
 - To interact with the bot, a user must have an entry in the database with the role `admin`.
-    
+
+- Please note, when you first start the project, you must add an `admin` user to the env file to initialize it in the database in the following format: `INIT_ADMIN_USER="[telegram id]:[user name]"`
+
+    ```
+    INIT_ADMIN_USER="1234567890:name"
+    ```
+
+- Once an `admin` has been initialized, that user can add new users and edit them through commands in the bot.
+
 - Only `admin` users can:
     
     - Add new users with specific roles.

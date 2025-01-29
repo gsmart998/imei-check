@@ -11,6 +11,7 @@ from database.database import (
     update_user,
     check_user_permissions,
     init_db,
+    init_user,
 )
 
 log = get_logger(__name__)  # get configured logger
@@ -197,6 +198,7 @@ def handle_all_messages(message: Message):
 if __name__ == "__main__":
     try:
         init_db()
+        init_user()
         bot.set_my_commands(commands=bot_commands)
         log.info("The bot is running...")
         bot.infinity_polling()
