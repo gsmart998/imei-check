@@ -81,6 +81,7 @@ This project is a backend system designed to validate and check IMEI devices usi
     TG_TOKEN=<Your Telegram Bot Token>
     IMEICHECK_NET_TOKEN=<Your API Token>
     DATABASE_URL="sqlite:///../db/sqlite.db"
+    INIT_ADMIN_USER="<telegram id>:<user name>"
     ```
     
 6. **Run the bot**:
@@ -140,7 +141,7 @@ urllib3==2.3.0
 
 - To interact with the bot, a user must have an entry in the database with the role `admin`.
 
-- Please note, when you first start the project, you must add an `admin` user to the env file to initialize it in the database in the following format: `INIT_ADMIN_USER="[telegram id]:[user name]"`
+- Please note, when you first start the project, you must add an `admin` user to the `.env` file to initialize it in the database in the following format: `INIT_ADMIN_USER="[telegram id]:[user name]"`
 
     ```
     INIT_ADMIN_USER="1234567890:name"
